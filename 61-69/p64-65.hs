@@ -92,18 +92,27 @@ leftDepth (Branch c l r) = 1 + leftDepth l
 
 --p66
 layout66 :: Tree a -> Tree (a , (Int, Int))
-layout66 tr = layout' (1, 1) tr
-            where layout' _ Empty = Empty
-                  layout' (x,y) (Branch c l r) = Branch (c, (newX, y)) left newRight
-                            where shiftN = merge left right 0
-                                  left =  layout' (x, y+1) l
-                                  right = layout' (x, y+1) r
-                                  newRight = shiftTree right shiftN
-                                  newX = (shiftN + topX left) `div` 2
-                  topX Empty = 0
-                  topX (Branch (c, (x',_)) _ _) = x'
-                  merge Empty _  n  = if n == 0 then 2 else n
-                  merge (Branch (_, (xl,_)) l1 r1)    Empty n = if n == 0 then xl+2 else n 
-                  merge (Branch (_, (xl,_)) l1 r1) (Branch (_, (xr,_)) l2 r2) n = merge r1 l2 (n + if xr - xl < 2 then 2 + xl - xr else 0)
-                  shiftTree Empty n = Empty
-                  shiftTree (Branch (c, (x',y')) l r) n = Branch (c, (x'+n, y')) (shiftTree l n) (shiftTree r n)                                                    
+layout66 tr = decodeTuple $ layout' (1, 1) tr
+            where layout' (x,y) Empty  = (Empty, [], [])
+                  layout' (x,y) (Branch c l r) = ( (Branch (c, (nodeX, y)) leftTree newRightTree), nodeX:lSideLeft, nodeX:sideRight )
+                        where (leftTree, lSideLeft, lSideRight) = layout' (x, y+1) l
+                              (rightTree, rSideLeft, rSideRight) = layout' (x, y+1) r
+                              shiftNum = calShift lSideRight rSideLeft
+                              newRightTree = shiftTree shiftNum rightTree
+                              sideRight = shiftList shiftNum rSideRight
+                              nodeX = calNodeX lSideLeft sideRight
+                  calNodeX [] _ = 1
+                  calNodeX lt [] = head lt + 1
+                  calNodeX lt rt = ((head lt) + (head rt)) `div` 2
+
+                  calShift [] [] = 0
+                  calShift [] rt = if head rt == 1 then 1 else 0
+                  calShift _ [] = 0
+                  calShift lsl lsr = maximum $ zipWith ((-).(+2)) lsl lsr
+
+                  shiftTree _ Empty = Empty
+                  shiftTree num (Branch (c,(x',y')) l r) = Branch (c, (x'+num ,y')) (shiftTree num l) (shiftTree num r)
+                  shiftList num ls = map (+num) ls 
+
+                  decodeTuple (a,_,_) = a
+
