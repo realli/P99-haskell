@@ -1,5 +1,6 @@
 import Data.Monoid
 import Data.List (union, unionBy)
+import Control.Applicative ( (<$>), (<*>) )
 
 data Graph a = Graph [a] [(a, a)]
                 deriving (Show, Eq)
@@ -55,3 +56,21 @@ friendToAdj = graphToAdj . friendToGraph
 
 adjToFriend :: (Eq a, Ord a) => Adjacency a -> Friend a
 adjToFriend = graphToFriend . adjToGraph
+
+-- p81
+-- example :
+-- findPaths 1 4 [(1,2),(2,3),(1,3),(3,4),(4,2),(5,6)]
+-- [[1,2,3,4],[1,3,4]]
+-- findPaths 2 6 [(1,2),(2,3),(1,3),(3,4),(4,2),(5,6)]
+-- []
+
+type Acyclic a = [(a, a)]
+
+findPaths :: (Eq a) => a -> a -> Acyclic a -> [[a]]
+findPaths _ _ [] = []
+findPaths start end acy
+     | start == end = [[end]]
+     | otherwise = let cands = filter ((== start) . fst) acy
+                       remains = filter ((/= start) . fst) acy 
+                       helper (x, y) = (:) <$> [x] <*> findPaths y end remains
+                   in concat $ map helper cands
